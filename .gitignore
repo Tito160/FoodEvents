@@ -1,0 +1,14 @@
+# Carpetas de compilación
+**/bin/
+**/obj/
+**/appsettings.json
+# Archivos temporales de Visual Studio
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Build de Rider
+.idea/
