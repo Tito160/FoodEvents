@@ -4,20 +4,37 @@ namespace FoodEvents.Biblioteca;
 
 public class ValidadorDominio
 {
-    public ResultadoValidacion ValidarChef(Chef chef)
+    private ResultadoValidacion ValidarPersonaBase(PersonaBase persona, string nombreEntidad)
     {
         var resultado = new ResultadoValidacion();
 
-        if (chef == null)
+        if (persona == null)
         {
-            resultado.Errores.Add("El chef no puede ser nulo.");
+            resultado.Errores.Add($"La instancia de {nombreEntidad} no puede ser nula.");
             return resultado;
         }
 
-        if (string.IsNullOrWhiteSpace(chef.NombreCompleto))
+        if (string.IsNullOrWhiteSpace(persona.NombreCompleto))
         {
-            resultado.Errores.Add("El nombre completo del chef es obligatorio.");
+            resultado.Errores.Add($"El nombre completo de {nombreEntidad} es obligatorio.");
         }
+
+        if (!EsEmailValido(persona.CorreoElectronico))
+        {
+            resultado.Errores.Add($"El correo electrónico de {nombreEntidad} no tiene un formato válido.");
+        }
+
+        if (!EsTelefonoValido(persona.Telefono))
+        {
+            resultado.Errores.Add($"El teléfono de {nombreEntidad} debe ser numérico y de longitud lógica.");
+        }
+
+        return resultado;
+    }
+
+    public ResultadoValidacion ValidarChef(Chef chef)
+    {
+        var resultado = ValidarPersonaBase(chef, "chef");
 
         if (string.IsNullOrWhiteSpace(chef.EspecialidadCulinaria))
         {
@@ -34,48 +51,27 @@ public class ValidadorDominio
             resultado.Errores.Add("Los años de experiencia no pueden ser negativos.");
         }
 
-        if (!EsEmailValido(chef.CorreoElectronico))
-        {
-            resultado.Errores.Add("El correo electrónico del chef no tiene un formato válido.");
-        }
-
-        if (!EsTelefonoValido(chef.TelefonoContacto))
-        {
-            resultado.Errores.Add("El teléfono de contacto del chef debe ser numérico y de longitud lógica.");
-        }
-
         return resultado;
     }
 
     public ResultadoValidacion ValidarParticipante(Participante participante)
     {
-        var resultado = new ResultadoValidacion();
-
-        if (participante == null)
-        {
-            resultado.Errores.Add("El participante no puede ser nulo.");
-            return resultado;
-        }
-
-        if (string.IsNullOrWhiteSpace(participante.NombreCompleto))
-        {
-            resultado.Errores.Add("El nombre completo del participante es obligatorio.");
-        }
-
-        if (!EsEmailValido(participante.CorreoElectronico))
-        {
-            resultado.Errores.Add("El correo electrónico del participante no tiene un formato válido.");
-        }
-
-        if (!EsTelefonoValido(participante.Telefono))
-        {
-            resultado.Errores.Add("El teléfono del participante debe ser numérico y de longitud lógica.");
-        }
+        var resultado = ValidarPersonaBase(participante, "participante");
 
         if (string.IsNullOrWhiteSpace(participante.DocumentoIdentidad))
         {
             resultado.Errores.Add("El documento de identidad del participante es obligatorio.");
         }
+
+        return resultado;
+    }
+
+    public ResultadoValidacion ValidarInvitadoEspecial(InvitadoEspecial invitado)
+    {
+        var resultado = ValidarPersonaBase(invitado, "invitado especial");
+
+        // No hay reglas adicionales obligatorias por ahora, pero este método
+        // permite especializar la validación si fuera necesario.
 
         return resultado;
     }
@@ -100,9 +96,19 @@ public class ValidadorDominio
             resultado.Errores.Add("La descripción detallada del evento es obligatoria.");
         }
 
-        if (string.IsNullOrWhiteSpace(evento.Ubicacion))
+        if (evento.Modalidad == ModalidadEvento.Presencial)
         {
-            resultado.Errores.Add("La ubicación del evento es obligatoria.");
+            if (string.IsNullOrWhiteSpace(evento.Ubicacion))
+            {
+                resultado.Errores.Add("La ubicación del evento presencial es obligatoria.");
+            }
+        }
+        else if (evento.Modalidad == ModalidadEvento.Virtual)
+        {
+            if (string.IsNullOrWhiteSpace(evento.UrlAccesoVirtual))
+            {
+                resultado.Errores.Add("La URL de acceso del evento virtual es obligatoria.");
+            }
         }
 
         if (evento.CapacidadMaxima <= 0)

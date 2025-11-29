@@ -42,11 +42,13 @@ public class EventosController : ControllerBase
             Nombre = dto.Nombre,
             DescripcionDetallada = dto.DescripcionDetallada,
             TipoEvento = dto.TipoEvento,
+            Modalidad = dto.Modalidad,
             FechaInicio = dto.FechaInicio,
             FechaFin = dto.FechaFin,
             CapacidadMaxima = dto.CapacidadMaxima,
             PrecioPorEntrada = dto.PrecioPorEntrada,
             Ubicacion = dto.Ubicacion,
+            UrlAccesoVirtual = dto.UrlAccesoVirtual,
             ChefId = dto.ChefId
         };
 
@@ -78,10 +80,12 @@ public class CrearEventoDto
     public string Nombre { get; set; } = string.Empty;
     public string DescripcionDetallada { get; set; } = string.Empty;
     public TipoEventoGastronomico TipoEvento { get; set; }
+    public ModalidadEvento Modalidad { get; set; }
     public DateTime FechaInicio { get; set; }
     public DateTime FechaFin { get; set; }
     public int CapacidadMaxima { get; set; }
     public decimal PrecioPorEntrada { get; set; }
     public string Ubicacion { get; set; } = string.Empty;
+    public string? UrlAccesoVirtual { get; set; }
     public int ChefId { get; set; }
 }

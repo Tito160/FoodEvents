@@ -57,6 +57,16 @@ public class FoodEventsService
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
+    public Task<List<InvitadoEspecial>> ObtenerInvitadosEspecialesAsync()
+    {
+        return _dbContext.InvitadosEspeciales.ToListAsync();
+    }
+
+    public Task<InvitadoEspecial?> ObtenerInvitadoEspecialPorIdAsync(int id)
+    {
+        return _dbContext.InvitadosEspeciales.FirstOrDefaultAsync(i => i.Id == id);
+    }
+
     public Task<List<Reserva>> ObtenerReservasAsync()
     {
         return _dbContext.Reservas
@@ -124,6 +134,32 @@ public class FoodEventsService
         }
 
         resultado.Valor = participante;
+        return resultado;
+    }
+
+    public async Task<ResultadoOperacion<InvitadoEspecial>> CrearInvitadoEspecialAsync(InvitadoEspecial invitado)
+    {
+        var resultado = new ResultadoOperacion<InvitadoEspecial>();
+        var validacion = _validador.ValidarInvitadoEspecial(invitado);
+
+        if (!validacion.EsValido)
+        {
+            resultado.Errores.AddRange(validacion.Errores);
+            return resultado;
+        }
+
+        try
+        {
+            _dbContext.InvitadosEspeciales.Add(invitado);
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            resultado.Errores.Add($"Error al guardar el invitado especial: {ex.Message}");
+            return resultado;
+        }
+
+        resultado.Valor = invitado;
         return resultado;
     }
 

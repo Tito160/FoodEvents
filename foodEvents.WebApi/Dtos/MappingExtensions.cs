@@ -15,6 +15,7 @@ public static class MappingExtensions
         Id = evento.Id,
         Nombre = evento.Nombre,
         TipoEvento = evento.TipoEvento,
+        Modalidad = evento.Modalidad,
         FechaInicio = evento.FechaInicio,
         FechaFin = evento.FechaFin,
         Ubicacion = evento.Ubicacion
@@ -52,11 +53,13 @@ public static class MappingExtensions
         Nombre = evento.Nombre,
         DescripcionDetallada = evento.DescripcionDetallada,
         TipoEvento = evento.TipoEvento,
+        Modalidad = evento.Modalidad,
         FechaInicio = evento.FechaInicio,
         FechaFin = evento.FechaFin,
         CapacidadMaxima = evento.CapacidadMaxima,
         PrecioPorEntrada = evento.PrecioPorEntrada,
         Ubicacion = evento.Ubicacion,
+        UrlAccesoVirtual = evento.UrlAccesoVirtual,
         Chef = evento.Chef != null ? evento.Chef.ToResumenDto() : new ChefResumenDto { Id = evento.ChefId }
     };
 

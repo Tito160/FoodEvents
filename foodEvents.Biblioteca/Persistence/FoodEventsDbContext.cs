@@ -7,6 +7,7 @@ public class FoodEventsDbContext : DbContext
     public DbSet<Chef> Chefs => Set<Chef>();
     public DbSet<EventoGastronomico> EventosGastronomicos => Set<EventoGastronomico>();
     public DbSet<Participante> Participantes => Set<Participante>();
+    public DbSet<InvitadoEspecial> InvitadosEspeciales => Set<InvitadoEspecial>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
 
     public FoodEventsDbContext(DbContextOptions<FoodEventsDbContext> options)
@@ -24,7 +25,7 @@ public class FoodEventsDbContext : DbContext
             entity.Property(c => c.EspecialidadCulinaria).IsRequired().HasMaxLength(200);
             entity.Property(c => c.Nacionalidad).IsRequired().HasMaxLength(100);
             entity.Property(c => c.CorreoElectronico).IsRequired().HasMaxLength(200);
-            entity.Property(c => c.TelefonoContacto).IsRequired().HasMaxLength(50);
+            entity.Property(c => c.Telefono).IsRequired().HasMaxLength(50);
         });
 
         modelBuilder.Entity<EventoGastronomico>(entity =>
@@ -45,6 +46,13 @@ public class FoodEventsDbContext : DbContext
             entity.Property(p => p.CorreoElectronico).IsRequired().HasMaxLength(200);
             entity.Property(p => p.Telefono).IsRequired().HasMaxLength(50);
             entity.Property(p => p.DocumentoIdentidad).IsRequired().HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<InvitadoEspecial>(entity =>
+        {
+            entity.Property(i => i.NombreCompleto).IsRequired().HasMaxLength(200);
+            entity.Property(i => i.CorreoElectronico).IsRequired().HasMaxLength(200);
+            entity.Property(i => i.Telefono).IsRequired().HasMaxLength(50);
         });
 
         modelBuilder.Entity<Reserva>(entity =>
