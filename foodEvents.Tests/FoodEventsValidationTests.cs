@@ -8,7 +8,7 @@ public class FoodEventsValidationTests
     private readonly ValidadorDominio _validador = new();
 
     [Fact]
-    public void ChefConCorreoInvalido_DebeFallarValidacion()
+    public void ChefConCorreoInvalido_DebeLanzarExcepcion()
     {
         var chef = new Chef
         {
@@ -20,14 +20,14 @@ public class FoodEventsValidationTests
             TelefonoContacto = "1234567"
         };
 
-        var resultado = _validador.ValidarChef(chef);
+        var excepcion = Assert.Throws<ValidacionDominioException>(() => _validador.ValidarChef(chef));
 
-        Assert.False(resultado.EsValido);
-        Assert.Contains(resultado.Errores, e => e.Contains("correo", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(excepcion.Errores);
+        Assert.Contains(excepcion.Errores, e => e.Contains("correo", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public void EventoConFechaFinAntesDeInicio_DebeFallarValidacion()
+    public void EventoConFechaFinAntesDeInicio_DebeLanzarExcepcion()
     {
         var evento = new EventoGastronomico
         {
@@ -42,14 +42,14 @@ public class FoodEventsValidationTests
             ChefId = 1
         };
 
-        var resultado = _validador.ValidarEvento(evento);
+        var excepcion = Assert.Throws<ValidacionDominioException>(() => _validador.ValidarEvento(evento));
 
-        Assert.False(resultado.EsValido);
-        Assert.Contains(resultado.Errores, e => e.Contains("fecha de fin", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(excepcion.Errores);
+        Assert.Contains(excepcion.Errores, e => e.Contains("fecha de fin", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public void ReservaEnEventoLleno_DebeFallarValidacion()
+    public void ReservaEnEventoLleno_DebeLanzarExcepcion()
     {
         var evento = new EventoGastronomico
         {
@@ -73,9 +73,45 @@ public class FoodEventsValidationTests
             YaPago = true
         };
 
-        var resultado = _validador.ValidarReserva(reserva, evento, reservasConfirmadasActuales: 1);
+        var excepcion = Assert.Throws<ValidacionDominioException>(() => 
+            _validador.ValidarReserva(reserva, evento, reservasConfirmadasActuales: 1));
 
-        Assert.False(resultado.EsValido);
-        Assert.Contains(resultado.Errores, e => e.Contains("evento que ya está lleno", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(excepcion.Errores);
+        Assert.Contains(excepcion.Errores, e => e.Contains("evento que ya está lleno", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ChefValido_NoDebeLanzarExcepcion()
+    {
+        var chef = new Chef
+        {
+            NombreCompleto = "Gordon Ramsay",
+            EspecialidadCulinaria = "Cocina francesa",
+            Nacionalidad = "Reino Unido",
+            AniosExperiencia = 20,
+            CorreoElectronico = "gordon@example.com",
+            TelefonoContacto = "1234567890"
+        };
+
+        // No debe lanzar excepción
+        _validador.ValidarChef(chef);
+    }
+
+    [Fact]
+    public void ParticipanteConDocumentoVacio_DebeLanzarExcepcion()
+    {
+        var participante = new Participante
+        {
+            NombreCompleto = "Juan Pérez",
+            CorreoElectronico = "juan@example.com",
+            Telefono = "1234567890",
+            DocumentoIdentidad = ""
+        };
+
+        var excepcion = Assert.Throws<ValidacionDominioException>(() => 
+            _validador.ValidarParticipante(participante));
+
+        Assert.NotEmpty(excepcion.Errores);
+        Assert.Contains(excepcion.Errores, e => e.Contains("documento", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -2,165 +2,196 @@ using System.Net.Mail;
 
 namespace FoodEvents.Biblioteca;
 
+/// <summary>
+/// Excepción personalizada para errores de validación de dominio.
+/// </summary>
+public class ValidacionDominioException : Exception
+{
+    public List<string> Errores { get; }
+
+    public ValidacionDominioException(string mensaje, List<string> errores) : base(mensaje)
+    {
+        Errores = errores;
+    }
+
+    public ValidacionDominioException(string mensaje) : base(mensaje)
+    {
+        Errores = new List<string> { mensaje };
+    }
+}
+
 public class ValidadorDominio
 {
-    private ResultadoValidacion ValidarPersonaBase(PersonaBase persona, string nombreEntidad)
+    private void ValidarPersonaBase(PersonaBase persona, string nombreEntidad)
     {
-        var resultado = new ResultadoValidacion();
+        var errores = new List<string>();
 
         if (persona == null)
         {
-            resultado.Errores.Add($"La instancia de {nombreEntidad} no puede ser nula.");
-            return resultado;
+            throw new ValidacionDominioException($"La instancia de {nombreEntidad} no puede ser nula.");
         }
 
         if (string.IsNullOrWhiteSpace(persona.NombreCompleto))
         {
-            resultado.Errores.Add($"El nombre completo de {nombreEntidad} es obligatorio.");
+            errores.Add($"El nombre completo de {nombreEntidad} es obligatorio.");
         }
 
         if (!EsEmailValido(persona.CorreoElectronico))
         {
-            resultado.Errores.Add($"El correo electrónico de {nombreEntidad} no tiene un formato válido.");
+            errores.Add($"El correo electrónico de {nombreEntidad} no tiene un formato válido.");
         }
 
         if (!EsTelefonoValido(persona.Telefono))
         {
-            resultado.Errores.Add($"El teléfono de {nombreEntidad} debe ser numérico y de longitud lógica.");
+            errores.Add($"El teléfono de {nombreEntidad} debe ser numérico y de longitud lógica.");
         }
 
-        return resultado;
+        if (errores.Count > 0)
+        {
+            throw new ValidacionDominioException($"Errores de validación en {nombreEntidad}:", errores);
+        }
     }
 
-    public ResultadoValidacion ValidarChef(Chef chef)
+    public void ValidarChef(Chef chef)
     {
-        var resultado = ValidarPersonaBase(chef, "chef");
+        var errores = new List<string>();
+
+        ValidarPersonaBase(chef, "chef");
 
         if (string.IsNullOrWhiteSpace(chef.EspecialidadCulinaria))
         {
-            resultado.Errores.Add("La especialidad culinaria del chef es obligatoria.");
+            errores.Add("La especialidad culinaria del chef es obligatoria.");
         }
 
         if (string.IsNullOrWhiteSpace(chef.Nacionalidad))
         {
-            resultado.Errores.Add("La nacionalidad del chef es obligatoria.");
+            errores.Add("La nacionalidad del chef es obligatoria.");
         }
 
         if (chef.AniosExperiencia < 0)
         {
-            resultado.Errores.Add("Los años de experiencia no pueden ser negativos.");
+            errores.Add("Los años de experiencia no pueden ser negativos.");
         }
 
-        return resultado;
+        if (errores.Count > 0)
+        {
+            throw new ValidacionDominioException("Errores de validación en chef:", errores);
+        }
     }
 
-    public ResultadoValidacion ValidarParticipante(Participante participante)
+    public void ValidarParticipante(Participante participante)
     {
-        var resultado = ValidarPersonaBase(participante, "participante");
+        var errores = new List<string>();
+
+        ValidarPersonaBase(participante, "participante");
 
         if (string.IsNullOrWhiteSpace(participante.DocumentoIdentidad))
         {
-            resultado.Errores.Add("El documento de identidad del participante es obligatorio.");
+            errores.Add("El documento de identidad del participante es obligatorio.");
         }
 
-        return resultado;
+        if (errores.Count > 0)
+        {
+            throw new ValidacionDominioException("Errores de validación en participante:", errores);
+        }
     }
 
-    public ResultadoValidacion ValidarInvitadoEspecial(InvitadoEspecial invitado)
+    public void ValidarInvitadoEspecial(InvitadoEspecial invitado)
     {
-        var resultado = ValidarPersonaBase(invitado, "invitado especial");
+        ValidarPersonaBase(invitado, "invitado especial");
 
         // No hay reglas adicionales obligatorias por ahora, pero este método
         // permite especializar la validación si fuera necesario.
-
-        return resultado;
     }
 
-    public ResultadoValidacion ValidarEvento(EventoGastronomico evento)
+    public void ValidarEvento(EventoGastronomico evento)
     {
-        var resultado = new ResultadoValidacion();
+        var errores = new List<string>();
 
         if (evento == null)
         {
-            resultado.Errores.Add("El evento no puede ser nulo.");
-            return resultado;
+            throw new ValidacionDominioException("El evento no puede ser nulo.");
         }
 
         if (string.IsNullOrWhiteSpace(evento.Nombre))
         {
-            resultado.Errores.Add("El nombre del evento es obligatorio.");
+            errores.Add("El nombre del evento es obligatorio.");
         }
 
         if (string.IsNullOrWhiteSpace(evento.DescripcionDetallada))
         {
-            resultado.Errores.Add("La descripción detallada del evento es obligatoria.");
+            errores.Add("La descripción detallada del evento es obligatoria.");
         }
 
         if (evento.Modalidad == ModalidadEvento.Presencial)
         {
             if (string.IsNullOrWhiteSpace(evento.Ubicacion))
             {
-                resultado.Errores.Add("La ubicación del evento presencial es obligatoria.");
+                errores.Add("La ubicación del evento presencial es obligatoria.");
             }
         }
         else if (evento.Modalidad == ModalidadEvento.Virtual)
         {
             if (string.IsNullOrWhiteSpace(evento.UrlAccesoVirtual))
             {
-                resultado.Errores.Add("La URL de acceso del evento virtual es obligatoria.");
+                errores.Add("La URL de acceso del evento virtual es obligatoria.");
             }
         }
 
         if (evento.CapacidadMaxima <= 0)
         {
-            resultado.Errores.Add("La capacidad máxima del evento debe ser mayor a cero.");
+            errores.Add("La capacidad máxima del evento debe ser mayor a cero.");
         }
 
         if (evento.PrecioPorEntrada < 0)
         {
-            resultado.Errores.Add("El precio por entrada no puede ser negativo.");
+            errores.Add("El precio por entrada no puede ser negativo.");
         }
 
         if (evento.FechaFin < evento.FechaInicio)
         {
-            resultado.Errores.Add("La fecha de fin no puede ser anterior a la fecha de inicio del evento.");
+            errores.Add("La fecha de fin no puede ser anterior a la fecha de inicio del evento.");
         }
 
         if (evento.ChefId <= 0)
         {
-            resultado.Errores.Add("El evento debe estar asociado a un chef válido.");
+            errores.Add("El evento debe estar asociado a un chef válido.");
         }
 
-        return resultado;
+        if (errores.Count > 0)
+        {
+            throw new ValidacionDominioException("Errores de validación en evento:", errores);
+        }
     }
 
-    public ResultadoValidacion ValidarReserva(Reserva reserva, EventoGastronomico? evento, int reservasConfirmadasActuales)
+    public void ValidarReserva(Reserva reserva, EventoGastronomico? evento, int reservasConfirmadasActuales)
     {
-        var resultado = new ResultadoValidacion();
+        var errores = new List<string>();
 
         if (reserva == null)
         {
-            resultado.Errores.Add("La reserva no puede ser nula.");
-            return resultado;
+            throw new ValidacionDominioException("La reserva no puede ser nula.");
         }
 
         if (evento == null)
         {
-            resultado.Errores.Add("El evento asociado a la reserva no existe.");
-            return resultado;
+            throw new ValidacionDominioException("El evento asociado a la reserva no existe.");
         }
 
         if (reserva.ParticipanteId <= 0)
         {
-            resultado.Errores.Add("La reserva debe tener un participante válido.");
+            errores.Add("La reserva debe tener un participante válido.");
         }
 
         if (evento.CapacidadMaxima <= reservasConfirmadasActuales)
         {
-            resultado.Errores.Add("No se puede reservar un lugar en un evento que ya está lleno.");
+            errores.Add("No se puede reservar un lugar en un evento que ya está lleno.");
         }
 
-        return resultado;
+        if (errores.Count > 0)
+        {
+            throw new ValidacionDominioException("Errores de validación en reserva:", errores);
+        }
     }
 
     private bool EsEmailValido(string? correo)
