@@ -30,9 +30,13 @@ public static class MappingExtensions
     public static ReservaResumenDto ToResumenDto(this Reserva reserva) => new()
     {
         Id = reserva.Id,
-        EstadoReserva = reserva.EstadoReserva,
         FechaReserva = reserva.FechaReserva,
-        YaPago = reserva.YaPago
+        YaPago = reserva.YaPago,
+        EstadoReserva = reserva.EstadoReserva,
+
+        Participante = reserva.Participante != null
+            ? reserva.Participante.ToResumenDto()
+            : new ParticipanteResumenDto { Id = reserva.ParticipanteId }
     };
 
     public static ChefDto ToDto(this Chef chef) => new()
@@ -60,7 +64,11 @@ public static class MappingExtensions
         PrecioPorEntrada = evento.PrecioPorEntrada,
         Ubicacion = evento.Ubicacion,
         UrlAccesoVirtual = evento.UrlAccesoVirtual,
-        Chef = evento.Chef != null ? evento.Chef.ToResumenDto() : new ChefResumenDto { Id = evento.ChefId }
+        Chef = evento.Chef != null ? evento.Chef.ToResumenDto() : new ChefResumenDto { Id = evento.ChefId },
+        reservas = evento.Reservas == null
+            ? new List<ReservaResumenDto>()
+            : evento.Reservas.Select(r => r.ToResumenDto()).ToList()
+
     };
 
     public static ParticipanteDto ToDto(this Participante participante) => new()

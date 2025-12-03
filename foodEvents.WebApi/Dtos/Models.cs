@@ -31,6 +31,7 @@ public class ReservaResumenDto
     public EstadoReserva EstadoReserva { get; set; }
     public DateTime FechaReserva { get; set; }
     public bool YaPago { get; set; }
+    public ParticipanteResumenDto Participante { get; set; } = new();
 }
 
 public class ChefDto
@@ -62,6 +63,7 @@ public class EventoDto
     public string? UrlAccesoVirtual { get; set; }
     public ChefResumenDto Chef { get; set; } = new();
     public List<ReservaResumenDto> reservas { get; set; } = new();
+
 }
 
 public class ParticipanteDto

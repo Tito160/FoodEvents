@@ -16,11 +16,17 @@ public class EventosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
-    {
-        var eventos = await _service.ObtenerEventosAsync();
-        return Ok(eventos.Select(e => e.ToDto()));
-    }
+public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
+{
+    var eventos = await _service.ObtenerEventosAsync();
+
+    // DEBUG: revisar en logs o breakpoint
+    var primeraCantidad = eventos.FirstOrDefault()?.Reservas?.Count ?? 0; // ¿> 0?
+    // opcional: return Ok(eventos); // devuelve entidades completas para inspeccionar JSON crudo
+
+    return Ok(eventos.Select(e => e.ToDto()));
+}
+
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<EventoDto>> GetById(int id)
