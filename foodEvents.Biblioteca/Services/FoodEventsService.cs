@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using foodEvents.Biblioteca.Common;
 
 namespace FoodEvents.Biblioteca;
 
@@ -18,8 +19,10 @@ public class FoodEventsService
         return _dbContext.EventosGastronomicos
             .Include(e => e.Chef)
             .Include(e => e.Reservas)
+                .ThenInclude(r => r.Participante)   // <-- importante si quieres datos del participante
             .ToListAsync();
     }
+
 
     public Task<EventoGastronomico?> ObtenerEventoPorIdAsync(int id)
     {
@@ -266,4 +269,88 @@ public class FoodEventsService
         await _dbContext.SaveChangesAsync();
         return true;
     }
+
+    public async Task<ResultadoOperacion<ResumenAgregarParticipantes>>
+AgregarParticipantesAEventoAsync(int eventoId, List<int> participanteIds)
+    {
+        var resultado = new ResultadoOperacion<ResumenAgregarParticipantes>
+        {
+            Valor = new ResumenAgregarParticipantes { EventoId = eventoId }
+        };
+        if (participanteIds == null || !participanteIds.Any())
+        {
+            resultado.Errores.Add("Debe enviar al menos un participante.");
+            return resultado;
+        }
+        var idsUnicos = participanteIds.Distinct().ToList();
+        var evento = await _dbContext.EventosGastronomicos
+        .Include(e => e.Reservas)
+        .FirstOrDefaultAsync(e => e.Id == eventoId);
+        if (evento == null)
+        {
+            resultado.Errores.Add("Evento no encontrado.");
+            return resultado;
+        }
+        var confirmadas = evento.Reservas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
+        var cuposLibres = evento.CapacidadMaxima - confirmadas;
+        var participantes = await _dbContext.Participantes
+        .Include(p => p.Reservas)
+        .ThenInclude(r => r.Evento)
+        .Where(p => idsUnicos.Contains(p.Id))
+        .ToListAsync();
+        var noEncontrados = idsUnicos.Except(participantes.Select(p => p.Id)).ToList();
+        if (noEncontrados.Any())
+            resultado.Errores.Add($"No encontrados: {string.Join(", ", noEncontrados)}");
+        var invalidos = new List<int>();
+        foreach (var p in participantes)
+        {
+            // Ya inscrito?
+            if (evento.Reservas.Any(r => r.ParticipanteId == p.Id))
+                invalidos.Add(p.Id);
+            // Conflicto de fecha?
+            else if (p.Reservas.Any(r =>
+            r.EstadoReserva == EstadoReserva.Confirmada &&
+            r.EventoGastronomicoId != evento.Id &&
+            r.Evento.FechaInicio < evento.FechaFin &&
+            r.Evento.FechaFin > evento.FechaInicio))
+            {
+                invalidos.Add(p.Id);
+            }
+        }
+        if (invalidos.Any())
+            resultado.Errores.Add($"No agregados (ya inscritos o conflicto): {string.Join(", ", invalidos)}");
+        var validos = participantes.Where(p => !invalidos.Contains(p.Id)).ToList();
+        if (!validos.Any()) return resultado;
+        var reservasNuevas = new List<Reserva>();
+        int cupos = cuposLibres;
+        foreach (var p in validos)
+        {
+            var reserva = new Reserva
+            {
+                ParticipanteId = p.Id,
+                EventoGastronomicoId = evento.Id,
+                FechaReserva = DateTime.UtcNow,
+                YaPago = false,
+                MetodoPago = MetodoPago.Efectivo,
+                EstadoReserva = cupos > 0 ? EstadoReserva.Confirmada : EstadoReserva.EnEspera
+            };
+            if (cupos > 0) cupos--;
+            reservasNuevas.Add(reserva);
+        }
+        _dbContext.Reservas.AddRange(reservasNuevas);
+        await _dbContext.SaveChangesAsync();
+        // Cargar relaciones necesarias
+        foreach (var r in reservasNuevas)
+        {
+            await _dbContext.Entry(r).Reference(x => x.Participante).LoadAsync();
+            await _dbContext.Entry(r).Reference(x => x.Evento).LoadAsync();
+            await _dbContext.Entry(r.Evento).Reference(x => x.Chef).LoadAsync();
+        }
+        resultado.Valor.ReservasCreadas = reservasNuevas;
+        resultado.Valor.Confirmados = reservasNuevas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
+        resultado.Valor.EnEspera = reservasNuevas.Count - resultado.Valor.Confirmados;
+        resultado.Valor.Mensaje = $"Agregados {reservasNuevas.Count} participantes";
+        return resultado;
+    }
+
 }

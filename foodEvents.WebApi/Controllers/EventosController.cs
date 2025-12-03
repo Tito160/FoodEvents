@@ -73,6 +73,26 @@ public class EventosController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("{id:int}/participantes")]
+public async Task<ActionResult> AgregarParticipantes(int id, [FromBody] List<int> participanteIds)
+{
+    var resultado = await _service.AgregarParticipantesAEventoAsync(id, participanteIds);
+
+    if (!resultado.Exito)
+        return BadRequest(new { errores = resultado.Errores });
+
+    var reservasDto = resultado.Valor.ReservasCreadas.Select(r => r.ToDto()).ToList();
+
+    return Ok(new
+    {
+        mensaje = resultado.Valor.Mensaje,
+        confirmados = resultado.Valor.Confirmados,
+        enEspera = resultado.Valor.EnEspera,
+        totalAgregados = resultado.Valor.ReservasCreadas.Count,
+        reservas = reservasDto
+    });
+}
 }
 
 public class CrearEventoDto

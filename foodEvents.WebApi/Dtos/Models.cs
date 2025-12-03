@@ -60,8 +60,8 @@ public class EventoDto
     public decimal PrecioPorEntrada { get; set; }
     public string Ubicacion { get; set; } = string.Empty;
     public string? UrlAccesoVirtual { get; set; }
-
     public ChefResumenDto Chef { get; set; } = new();
+    public List<ReservaResumenDto> reservas { get; set; } = new();
 }
 
 public class ParticipanteDto
