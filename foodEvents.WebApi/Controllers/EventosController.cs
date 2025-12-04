@@ -16,11 +16,17 @@ public class EventosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
-    {
-        var eventos = await _service.ObtenerEventosAsync();
-        return Ok(eventos.Select(e => e.ToDto()));
-    }
+public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
+{
+    var eventos = await _service.ObtenerEventosAsync();
+
+    // DEBUG: revisar en logs o breakpoint
+    var primeraCantidad = eventos.FirstOrDefault()?.Reservas?.Count ?? 0; // ¿> 0?
+    // opcional: return Ok(eventos); // devuelve entidades completas para inspeccionar JSON crudo
+
+    return Ok(eventos.Select(e => e.ToDto()));
+}
+
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<EventoDto>> GetById(int id)
@@ -42,11 +48,13 @@ public class EventosController : ControllerBase
             Nombre = dto.Nombre,
             DescripcionDetallada = dto.DescripcionDetallada,
             TipoEvento = dto.TipoEvento,
+            Modalidad = dto.Modalidad,
             FechaInicio = dto.FechaInicio,
             FechaFin = dto.FechaFin,
             CapacidadMaxima = dto.CapacidadMaxima,
             PrecioPorEntrada = dto.PrecioPorEntrada,
             Ubicacion = dto.Ubicacion,
+            UrlAccesoVirtual = dto.UrlAccesoVirtual,
             ChefId = dto.ChefId
         };
 
@@ -71,6 +79,26 @@ public class EventosController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("{id:int}/participantes")]
+public async Task<ActionResult> AgregarParticipantes(int id, [FromBody] List<int> participanteIds)
+{
+    var resultado = await _service.AgregarParticipantesAEventoAsync(id, participanteIds);
+
+    if (!resultado.Exito)
+        return BadRequest(new { errores = resultado.Errores });
+
+    var reservasDto = resultado.Valor.ReservasCreadas.Select(r => r.ToDto()).ToList();
+
+    return Ok(new
+    {
+        mensaje = resultado.Valor.Mensaje,
+        confirmados = resultado.Valor.Confirmados,
+        enEspera = resultado.Valor.EnEspera,
+        totalAgregados = resultado.Valor.ReservasCreadas.Count,
+        reservas = reservasDto
+    });
+}
 }
 
 public class CrearEventoDto
@@ -78,10 +106,12 @@ public class CrearEventoDto
     public string Nombre { get; set; } = string.Empty;
     public string DescripcionDetallada { get; set; } = string.Empty;
     public TipoEventoGastronomico TipoEvento { get; set; }
+    public ModalidadEvento Modalidad { get; set; }
     public DateTime FechaInicio { get; set; }
     public DateTime FechaFin { get; set; }
     public int CapacidadMaxima { get; set; }
     public decimal PrecioPorEntrada { get; set; }
     public string Ubicacion { get; set; } = string.Empty;
+    public string? UrlAccesoVirtual { get; set; }
     public int ChefId { get; set; }
 }

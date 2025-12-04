@@ -13,6 +13,7 @@ public class EventoResumenDto
     public int Id { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public TipoEventoGastronomico TipoEvento { get; set; }
+    public ModalidadEvento Modalidad { get; set; }
     public DateTime FechaInicio { get; set; }
     public DateTime FechaFin { get; set; }
     public string Ubicacion { get; set; } = string.Empty;
@@ -30,6 +31,7 @@ public class ReservaResumenDto
     public EstadoReserva EstadoReserva { get; set; }
     public DateTime FechaReserva { get; set; }
     public bool YaPago { get; set; }
+    public ParticipanteResumenDto Participante { get; set; } = new();
 }
 
 public class ChefDto
@@ -52,13 +54,16 @@ public class EventoDto
     public string Nombre { get; set; } = string.Empty;
     public string DescripcionDetallada { get; set; } = string.Empty;
     public TipoEventoGastronomico TipoEvento { get; set; }
+    public ModalidadEvento Modalidad { get; set; }
     public DateTime FechaInicio { get; set; }
     public DateTime FechaFin { get; set; }
     public int CapacidadMaxima { get; set; }
     public decimal PrecioPorEntrada { get; set; }
     public string Ubicacion { get; set; } = string.Empty;
-
+    public string? UrlAccesoVirtual { get; set; }
     public ChefResumenDto Chef { get; set; } = new();
+    public List<ReservaResumenDto> reservas { get; set; } = new();
+
 }
 
 public class ParticipanteDto

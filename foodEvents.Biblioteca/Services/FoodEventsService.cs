@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using foodEvents.Biblioteca.Common;
 
 namespace FoodEvents.Biblioteca;
 
@@ -18,8 +19,10 @@ public class FoodEventsService
         return _dbContext.EventosGastronomicos
             .Include(e => e.Chef)
             .Include(e => e.Reservas)
+                .ThenInclude(r => r.Participante)   // <-- importante si quieres datos del participante
             .ToListAsync();
     }
+
 
     public Task<EventoGastronomico?> ObtenerEventoPorIdAsync(int id)
     {
@@ -57,6 +60,16 @@ public class FoodEventsService
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
+    public Task<List<InvitadoEspecial>> ObtenerInvitadosEspecialesAsync()
+    {
+        return _dbContext.InvitadosEspeciales.ToListAsync();
+    }
+
+    public Task<InvitadoEspecial?> ObtenerInvitadoEspecialPorIdAsync(int id)
+    {
+        return _dbContext.InvitadosEspeciales.FirstOrDefaultAsync(i => i.Id == id);
+    }
+
     public Task<List<Reserva>> ObtenerReservasAsync()
     {
         return _dbContext.Reservas
@@ -78,86 +91,108 @@ public class FoodEventsService
     public async Task<ResultadoOperacion<Chef>> CrearChefAsync(Chef chef)
     {
         var resultado = new ResultadoOperacion<Chef>();
-        var validacion = _validador.ValidarChef(chef);
-
-        if (!validacion.EsValido)
-        {
-            resultado.Errores.AddRange(validacion.Errores);
-            return resultado;
-        }
 
         try
         {
+            _validador.ValidarChef(chef);
+
             _dbContext.Chefs.Add(chef);
             await _dbContext.SaveChangesAsync();
+
+            resultado.Valor = chef;
+        }
+        catch (ValidacionDominioException ex)
+        {
+            resultado.Errores.AddRange(ex.Errores);
         }
         catch (Exception ex)
         {
             resultado.Errores.Add($"Error al guardar el chef: {ex.Message}");
-            return resultado;
         }
 
-        resultado.Valor = chef;
         return resultado;
     }
 
     public async Task<ResultadoOperacion<Participante>> CrearParticipanteAsync(Participante participante)
     {
         var resultado = new ResultadoOperacion<Participante>();
-        var validacion = _validador.ValidarParticipante(participante);
-
-        if (!validacion.EsValido)
-        {
-            resultado.Errores.AddRange(validacion.Errores);
-            return resultado;
-        }
 
         try
         {
+            _validador.ValidarParticipante(participante);
+
             _dbContext.Participantes.Add(participante);
             await _dbContext.SaveChangesAsync();
+
+            resultado.Valor = participante;
+        }
+        catch (ValidacionDominioException ex)
+        {
+            resultado.Errores.AddRange(ex.Errores);
         }
         catch (Exception ex)
         {
             resultado.Errores.Add($"Error al guardar el participante: {ex.Message}");
-            return resultado;
         }
 
-        resultado.Valor = participante;
+        return resultado;
+    }
+
+    public async Task<ResultadoOperacion<InvitadoEspecial>> CrearInvitadoEspecialAsync(InvitadoEspecial invitado)
+    {
+        var resultado = new ResultadoOperacion<InvitadoEspecial>();
+
+        try
+        {
+            _validador.ValidarInvitadoEspecial(invitado);
+
+            _dbContext.InvitadosEspeciales.Add(invitado);
+            await _dbContext.SaveChangesAsync();
+
+            resultado.Valor = invitado;
+        }
+        catch (ValidacionDominioException ex)
+        {
+            resultado.Errores.AddRange(ex.Errores);
+        }
+        catch (Exception ex)
+        {
+            resultado.Errores.Add($"Error al guardar el invitado especial: {ex.Message}");
+        }
+
         return resultado;
     }
 
     public async Task<ResultadoOperacion<EventoGastronomico>> CrearEventoAsync(EventoGastronomico evento)
     {
         var resultado = new ResultadoOperacion<EventoGastronomico>();
-        var validacion = _validador.ValidarEvento(evento);
-
-        if (!validacion.EsValido)
-        {
-            resultado.Errores.AddRange(validacion.Errores);
-            return resultado;
-        }
-
-        var chefExiste = await _dbContext.Chefs.AnyAsync(c => c.Id == evento.ChefId);
-        if (!chefExiste)
-        {
-            resultado.Errores.Add("El chef especificado no existe.");
-            return resultado;
-        }
 
         try
         {
+            _validador.ValidarEvento(evento);
+
+            var chefExiste = await _dbContext.Chefs.AnyAsync(c => c.Id == evento.ChefId);
+            if (!chefExiste)
+            {
+                resultado.Errores.Add("El chef especificado no existe.");
+                return resultado;
+            }
+
             _dbContext.EventosGastronomicos.Add(evento);
             await _dbContext.SaveChangesAsync();
             await _dbContext.Entry(evento).Reference(e => e.Chef).LoadAsync();
+
+            resultado.Valor = evento;
+        }
+        catch (ValidacionDominioException ex)
+        {
+            resultado.Errores.AddRange(ex.Errores);
         }
         catch (Exception ex)
         {
             resultado.Errores.Add($"Error al guardar el evento: {ex.Message}");
-            return resultado;
         }
 
-        resultado.Valor = evento;
         return resultado;
     }
 
@@ -178,48 +213,47 @@ public class FoodEventsService
     {
         var resultado = new ResultadoOperacion<Reserva>();
 
-        var evento = await _dbContext.EventosGastronomicos
-            .Include(e => e.Reservas)
-            .FirstOrDefaultAsync(e => e.Id == reserva.EventoGastronomicoId);
-
-        if (evento is null)
-        {
-            resultado.Errores.Add("El evento especificado no existe.");
-            return resultado;
-        }
-
-        var participante = await _dbContext.Participantes.FindAsync(reserva.ParticipanteId);
-        if (participante is null)
-        {
-            resultado.Errores.Add("El participante especificado no existe.");
-            return resultado;
-        }
-
-        var reservasConfirmadas = evento.Reservas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
-
-        var validacion = _validador.ValidarReserva(reserva, evento, reservasConfirmadas);
-        if (!validacion.EsValido)
-        {
-            resultado.Errores.AddRange(validacion.Errores);
-            return resultado;
-        }
-
-        reserva.FechaReserva = DateTime.UtcNow;
-
         try
         {
+            var evento = await _dbContext.EventosGastronomicos
+                .Include(e => e.Reservas)
+                .FirstOrDefaultAsync(e => e.Id == reserva.EventoGastronomicoId);
+
+            if (evento is null)
+            {
+                resultado.Errores.Add("El evento especificado no existe.");
+                return resultado;
+            }
+
+            var participante = await _dbContext.Participantes.FindAsync(reserva.ParticipanteId);
+            if (participante is null)
+            {
+                resultado.Errores.Add("El participante especificado no existe.");
+                return resultado;
+            }
+
+            var reservasConfirmadas = evento.Reservas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
+
+            _validador.ValidarReserva(reserva, evento, reservasConfirmadas);
+
+            reserva.FechaReserva = DateTime.UtcNow;
+
             _dbContext.Reservas.Add(reserva);
             await _dbContext.SaveChangesAsync();
             await _dbContext.Entry(reserva).Reference(r => r.Evento).LoadAsync();
             await _dbContext.Entry(reserva).Reference(r => r.Participante).LoadAsync();
+
+            resultado.Valor = reserva;
+        }
+        catch (ValidacionDominioException ex)
+        {
+            resultado.Errores.AddRange(ex.Errores);
         }
         catch (Exception ex)
         {
             resultado.Errores.Add($"Error al guardar la reserva: {ex.Message}");
-            return resultado;
         }
 
-        resultado.Valor = reserva;
         return resultado;
     }
 
@@ -235,4 +269,88 @@ public class FoodEventsService
         await _dbContext.SaveChangesAsync();
         return true;
     }
+
+    public async Task<ResultadoOperacion<ResumenAgregarParticipantes>>
+AgregarParticipantesAEventoAsync(int eventoId, List<int> participanteIds)
+    {
+        var resultado = new ResultadoOperacion<ResumenAgregarParticipantes>
+        {
+            Valor = new ResumenAgregarParticipantes { EventoId = eventoId }
+        };
+        if (participanteIds == null || !participanteIds.Any())
+        {
+            resultado.Errores.Add("Debe enviar al menos un participante.");
+            return resultado;
+        }
+        var idsUnicos = participanteIds.Distinct().ToList();
+        var evento = await _dbContext.EventosGastronomicos
+        .Include(e => e.Reservas)
+        .FirstOrDefaultAsync(e => e.Id == eventoId);
+        if (evento == null)
+        {
+            resultado.Errores.Add("Evento no encontrado.");
+            return resultado;
+        }
+        var confirmadas = evento.Reservas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
+        var cuposLibres = evento.CapacidadMaxima - confirmadas;
+        var participantes = await _dbContext.Participantes
+        .Include(p => p.Reservas)
+        .ThenInclude(r => r.Evento)
+        .Where(p => idsUnicos.Contains(p.Id))
+        .ToListAsync();
+        var noEncontrados = idsUnicos.Except(participantes.Select(p => p.Id)).ToList();
+        if (noEncontrados.Any())
+            resultado.Errores.Add($"No encontrados: {string.Join(", ", noEncontrados)}");
+        var invalidos = new List<int>();
+        foreach (var p in participantes)
+        {
+            // Ya inscrito?
+            if (evento.Reservas.Any(r => r.ParticipanteId == p.Id))
+                invalidos.Add(p.Id);
+            // Conflicto de fecha?
+            else if (p.Reservas.Any(r =>
+            r.EstadoReserva == EstadoReserva.Confirmada &&
+            r.EventoGastronomicoId != evento.Id &&
+            r.Evento.FechaInicio < evento.FechaFin &&
+            r.Evento.FechaFin > evento.FechaInicio))
+            {
+                invalidos.Add(p.Id);
+            }
+        }
+        if (invalidos.Any())
+            resultado.Errores.Add($"No agregados (ya inscritos o conflicto): {string.Join(", ", invalidos)}");
+        var validos = participantes.Where(p => !invalidos.Contains(p.Id)).ToList();
+        if (!validos.Any()) return resultado;
+        var reservasNuevas = new List<Reserva>();
+        int cupos = cuposLibres;
+        foreach (var p in validos)
+        {
+            var reserva = new Reserva
+            {
+                ParticipanteId = p.Id,
+                EventoGastronomicoId = evento.Id,
+                FechaReserva = DateTime.UtcNow,
+                YaPago = false,
+                MetodoPago = MetodoPago.Efectivo,
+                EstadoReserva = cupos > 0 ? EstadoReserva.Confirmada : EstadoReserva.EnEspera
+            };
+            if (cupos > 0) cupos--;
+            reservasNuevas.Add(reserva);
+        }
+        _dbContext.Reservas.AddRange(reservasNuevas);
+        await _dbContext.SaveChangesAsync();
+        // Cargar relaciones necesarias
+        foreach (var r in reservasNuevas)
+        {
+            await _dbContext.Entry(r).Reference(x => x.Participante).LoadAsync();
+            await _dbContext.Entry(r).Reference(x => x.Evento).LoadAsync();
+            await _dbContext.Entry(r.Evento).Reference(x => x.Chef).LoadAsync();
+        }
+        resultado.Valor.ReservasCreadas = reservasNuevas;
+        resultado.Valor.Confirmados = reservasNuevas.Count(r => r.EstadoReserva == EstadoReserva.Confirmada);
+        resultado.Valor.EnEspera = reservasNuevas.Count - resultado.Valor.Confirmados;
+        resultado.Valor.Mensaje = $"Agregados {reservasNuevas.Count} participantes";
+        return resultado;
+    }
+
 }
