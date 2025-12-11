@@ -130,6 +130,42 @@ public class EventosController : ControllerBase
         return Ok(tipos);
     }
 
+    [HttpGet("{id:int}/cupos-disponibles")]
+    public async Task<ActionResult<object>> GetCuposDisponibles(int id)
+    {
+        var evento = await _service.ObtenerEventoPorIdAsync(id);
+
+        if (evento is null)
+            return NotFound(new { mensaje = "Evento no encontrado" });
+
+        // Contar solo reservas confirmadas
+        var reservasConfirmadas = evento.Reservas?
+            .Count(r => r.EstadoReserva == EstadoReserva.Confirmada) ?? 0;
+
+        var cuposOcupados = reservasConfirmadas;
+        var cuposDisponibles = evento.CapacidadMaxima - cuposOcupados;
+        var estaLleno = cuposDisponibles <= 0;
+
+        var enEspera = evento.Reservas?
+        .Count(r => r.EstadoReserva == EstadoReserva.EnEspera) ?? 0;
+
+        return Ok(new
+        {
+            eventoId = evento.Id,
+            nombreEvento = evento.Nombre,
+            capacidadMaxima = evento.CapacidadMaxima,
+            cuposOcupados,
+            cuposDisponibles = cuposDisponibles < 0 ? 0 : cuposDisponibles,
+            estado = estaLleno ? "COMPLETO" : cuposDisponibles == 1 ? "Último cupo disponible" : "Hay cupos disponibles",
+            mensaje = estaLleno 
+                ? "El evento está completo. No se pueden agregar más inscripciones confirmadas." 
+                : cuposDisponibles == 1 
+                    ? "¡Queda solo 1 cupo! Apurate a inscribirte." 
+                    : $"Quedan {cuposDisponibles} cupos disponibles de {evento.CapacidadMaxima}.",
+            enListaDeEspera = enEspera
+        });
+    }
+
 }
 
 public class CrearEventoDto
