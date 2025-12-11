@@ -146,9 +146,6 @@ public class EventosController : ControllerBase
         var cuposDisponibles = evento.CapacidadMaxima - cuposOcupados;
         var estaLleno = cuposDisponibles <= 0;
 
-        var enEspera = evento.Reservas?
-        .Count(r => r.EstadoReserva == EstadoReserva.EnEspera) ?? 0;
-
         return Ok(new
         {
             eventoId = evento.Id,
@@ -161,8 +158,7 @@ public class EventosController : ControllerBase
                 ? "El evento está completo. No se pueden agregar más inscripciones confirmadas." 
                 : cuposDisponibles == 1 
                     ? "¡Queda solo 1 cupo! Apurate a inscribirte." 
-                    : $"Quedan {cuposDisponibles} cupos disponibles de {evento.CapacidadMaxima}.",
-            enListaDeEspera = enEspera
+                    : $"Quedan {cuposDisponibles} cupos disponibles de {evento.CapacidadMaxima}."
         });
     }
 
