@@ -16,16 +16,16 @@ public class EventosController : ControllerBase
     }
 
     [HttpGet]
-public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
-{
-    var eventos = await _service.ObtenerEventosAsync();
+    public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
+    {
+        var eventos = await _service.ObtenerEventosAsync();
 
-    // DEBUG: revisar en logs o breakpoint
-    var primeraCantidad = eventos.FirstOrDefault()?.Reservas?.Count ?? 0; // ¿> 0?
-    // opcional: return Ok(eventos); // devuelve entidades completas para inspeccionar JSON crudo
+        // DEBUG: revisar en logs o breakpoint
+        var primeraCantidad = eventos.FirstOrDefault()?.Reservas?.Count ?? 0; // ¿> 0?
+                                                                              // opcional: return Ok(eventos); // devuelve entidades completas para inspeccionar JSON crudo
 
-    return Ok(eventos.Select(e => e.ToDto()));
-}
+        return Ok(eventos.Select(e => e.ToDto()));
+    }
 
 
     [HttpGet("{id:int}")]
@@ -81,24 +81,55 @@ public async Task<ActionResult<IEnumerable<EventoDto>>> Get()
     }
 
     [HttpPost("{id:int}/participantes")]
-public async Task<ActionResult> AgregarParticipantes(int id, [FromBody] List<int> participanteIds)
-{
-    var resultado = await _service.AgregarParticipantesAEventoAsync(id, participanteIds);
-
-    if (!resultado.Exito)
-        return BadRequest(new { errores = resultado.Errores });
-
-    var reservasDto = resultado.Valor.ReservasCreadas.Select(r => r.ToDto()).ToList();
-
-    return Ok(new
+    public async Task<ActionResult> AgregarParticipantes(int id, [FromBody] List<int> participanteIds)
     {
-        mensaje = resultado.Valor.Mensaje,
-        confirmados = resultado.Valor.Confirmados,
-        enEspera = resultado.Valor.EnEspera,
-        totalAgregados = resultado.Valor.ReservasCreadas.Count,
-        reservas = reservasDto
-    });
-}
+        var resultado = await _service.AgregarParticipantesAEventoAsync(id, participanteIds);
+
+        if (!resultado.Exito)
+            return BadRequest(new { errores = resultado.Errores });
+
+        var reservasDto = resultado.Valor.ReservasCreadas.Select(r => r.ToDto()).ToList();
+
+        return Ok(new
+        {
+            mensaje = resultado.Valor.Mensaje,
+            confirmados = resultado.Valor.Confirmados,
+            enEspera = resultado.Valor.EnEspera,
+            totalAgregados = resultado.Valor.ReservasCreadas.Count,
+            reservas = reservasDto
+        });
+    }
+
+    [HttpGet("modalidades")]
+    public ActionResult<IEnumerable<object>> GetModalidadesEvento()
+    {
+        var modalidades = Enum.GetValues(typeof(ModalidadEvento))
+                            .Cast<ModalidadEvento>()
+                            .Select(m => new
+                            {
+                                valor = (int)m,
+                                nombre = m.ToString()
+                            })
+                            .ToList();
+
+        return Ok(modalidades);
+    }
+
+    [HttpGet("tipos")]
+    public ActionResult<IEnumerable<object>> GetTiposEventoGastronomico()
+    {
+        var tipos = Enum.GetValues(typeof(TipoEventoGastronomico))
+                        .Cast<TipoEventoGastronomico>()
+                        .Select(t => new
+                        {
+                            valor = (int)t,
+                            nombre = t.ToString() // Cata, Feria, Clase, CenaTematica
+                        })
+                        .ToList();
+
+        return Ok(tipos);
+    }
+
 }
 
 public class CrearEventoDto
